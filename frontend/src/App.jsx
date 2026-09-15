@@ -914,7 +914,19 @@ function App() {
       <audio ref={killSoundRef} src="/audio/kill.wav" preload="auto" />
 
       <div className="game-shell">
-        <canvas ref={canvasRef} />
+        <canvas
+          ref={canvasRef}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerEnd}
+          onPointerCancel={handlePointerEnd}
+          onPointerLeave={handlePointerEnd}
+          style={{
+            touchAction: "none",
+            WebkitUserSelect: "none",
+            userSelect: "none",
+          }}
+        />
 
         {screen === "start" && (
           <div className="overlay">
