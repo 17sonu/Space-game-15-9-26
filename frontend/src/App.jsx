@@ -202,7 +202,6 @@ function App() {
 
   const newGame = useCallback(() => {
     touchRef.current.active = false;
-
     const stars = Array.from({ length: 160 }, () => ({
       x: Math.random() * W,
       y: Math.random() * H,
@@ -396,7 +395,7 @@ function App() {
 
       if (touchRef.current.active) {
         // Touch controls are only used while a finger is on the game.
-        // Desktop keyboard/mouse behavior remains unchanged.
+        // Desktop keyboard controls remain unchanged.
         const targetX = touchRef.current.x;
         const difference = targetX - game.player.x;
         const touchStep = game.player.speed * 1.35 * dt;
@@ -409,7 +408,6 @@ function App() {
       } else {
         game.player.x += direction * game.player.speed * dt;
       }
-
       game.player.x = Math.max(28, Math.min(W - 28, game.player.x));
 
       if (game.player.invulnerable > 0) game.player.invulnerable -= dt;
@@ -873,7 +871,7 @@ function App() {
     const rect = canvas.getBoundingClientRect();
     if (!rect.width) return;
 
-    // Convert the phone/tablet screen position into the game's fixed 1280px world.
+    // Convert screen position to the game's fixed 1280px world.
     const x = ((clientX - rect.left) / rect.width) * W;
     touchRef.current.x = Math.max(28, Math.min(W - 28, x));
   }, []);
@@ -997,8 +995,18 @@ function App() {
               <button className="secondary" onClick={showEndLeaderboard}>
                 {leaderboardOpen ? "HIDE LEADERBOARD" : "LEADERBOARD"}
               </button>
+            </div>
+          </div>
+        )}
 
-              {leaderboardOpen && <Leaderboard scores={leaderboard} />}
+        {leaderboardOpen && (screen === "gameover" || screen === "win") && (
+          <div className="leaderboard-modal overlay">
+            <div className="panel leaderboard-panel">
+              <h1>LEADERBOARD</h1>
+
+              <Leaderboard scores={leaderboard} />
+
+              <button onClick={() => setLeaderboardOpen(false)}>CLOSE</button>
             </div>
           </div>
         )}
