@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
-const API_URL = import.meta.env.VITE_API_URL || "https://space-game-backend.vercel.app/api";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 const W = 1280;
 const H = 720;
 
@@ -130,6 +130,7 @@ function App() {
   const gameRef = useRef(null);
   const bgMusicRef = useRef(null);
   const killSoundRef = useRef(null);
+  const touchRef = useRef({ active: false, x: W / 2 });
 
   const [screen, setScreen] = useState("start");
   const [score, setScore] = useState(0);
@@ -200,6 +201,8 @@ function App() {
   };
 
   const newGame = useCallback(() => {
+    touchRef.current.active = false;
+
     const stars = Array.from({ length: 160 }, () => ({
       x: Math.random() * W,
       y: Math.random() * H,
@@ -256,6 +259,7 @@ function App() {
       const game = gameRef.current;
       if (!game) return;
 
+      touchRef.current.active = false;
       game.running = false;
       game.paused = false;
       setScore(game.score);
@@ -390,7 +394,22 @@ function App() {
       if (keys.ArrowLeft || keys.a || keys.A) direction -= 1;
       if (keys.ArrowRight || keys.d || keys.D) direction += 1;
 
-      game.player.x += direction * game.player.speed * dt;
+      if (touchRef.current.active) {
+        // Touch controls are only used while a finger is on the game.
+        // Desktop keyboard/mouse behavior remains unchanged.
+        const targetX = touchRef.current.x;
+        const difference = targetX - game.player.x;
+        const touchStep = game.player.speed * 1.35 * dt;
+
+        if (Math.abs(difference) <= touchStep) {
+          game.player.x = targetX;
+        } else {
+          game.player.x += Math.sign(difference) * touchStep;
+        }
+      } else {
+        game.player.x += direction * game.player.speed * dt;
+      }
+
       game.player.x = Math.max(28, Math.min(W - 28, game.player.x));
 
       if (game.player.invulnerable > 0) game.player.invulnerable -= dt;
@@ -836,6 +855,7 @@ function App() {
   const closeMenu = () => {
     const game = gameRef.current;
     if (!game) return;
+    touchRef.current.active = false;
     game.paused = false;
     setScreen("playing");
     playMusic();
@@ -845,6 +865,48 @@ function App() {
     setLeaderboardOpen((value) => !value);
     if (!leaderboardOpen) loadScores();
   };
+
+  const updateTouchPosition = useCallback((clientX) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width) return;
+
+    // Convert the phone/tablet screen position into the game's fixed 1280px world.
+    const x = ((clientX - rect.left) / rect.width) * W;
+    touchRef.current.x = Math.max(28, Math.min(W - 28, x));
+  }, []);
+
+  const handlePointerDown = useCallback(
+    (event) => {
+      if (event.pointerType !== "touch") return;
+      if (screen !== "playing") return;
+
+      event.preventDefault();
+      touchRef.current.active = true;
+      updateTouchPosition(event.clientX);
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    },
+    [screen, updateTouchPosition],
+  );
+
+  const handlePointerMove = useCallback(
+    (event) => {
+      if (event.pointerType !== "touch") return;
+      if (!touchRef.current.active) return;
+
+      event.preventDefault();
+      updateTouchPosition(event.clientX);
+    },
+    [updateTouchPosition],
+  );
+
+  const handlePointerEnd = useCallback((event) => {
+    if (event.pointerType !== "touch") return;
+    touchRef.current.active = false;
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+  }, []);
 
   return (
     <div className="app">
